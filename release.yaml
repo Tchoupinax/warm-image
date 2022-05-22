@@ -1,43 +1,73 @@
 apiVersion: v1
 kind: Namespace
-metadata: {name: warmimage-system}
+metadata:
+  name: warmimage-system
 
 ---
 apiVersion: v1
 kind: ServiceAccount
-metadata: {name: warmimage-controller, namespace: warmimage-system}
+metadata:
+  name: warmimage-controller
+  namespace: warmimage-system
 
 ---
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
-metadata: {name: warmimage-controller-admin}
-roleRef: {apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: cluster-admin}
+metadata:
+  name: warmimage-controller-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
 subjects:
-- {kind: ServiceAccount, name: warmimage-controller, namespace: warmimage-system}
+  - kind: ServiceAccount
+    name: warmimage-controller
+    namespace: warmimage-system
 
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
-metadata: {name: warmimages.mattmoor.io}
+metadata:
+  name: warmimages.mattmoor.io
 spec:
   group: mattmoor.io
-  names: {kind: WarmImage, plural: warmimages, singular: warmimage}
+  names:
+    kind: WarmImage
+    plural: warmimages
+    singular: warmimage
   scope: Namespaced
-  version: v2
+  versions: 
+    - name: v2
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
 
 ---
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
-metadata: {name: warmimage-controller, namespace: warmimage-system}
+metadata:
+  name: warmimage-controller
+  namespace: warmimage-system
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: warmimage-controller
   template:
     metadata:
-      labels: {app: warmimage-controller}
+      labels:
+        app: warmimage-controller
     spec:
-      containers:
-      - args: [-logtostderr=true, -stderrthreshold=INFO, -sleeper, 'gcr.io/mattmoor-public/sleeper@sha256:d431f1c78bb16fbb0c9831a610bc9580379a4f9ab0a339efd2ffb36ea5ffeca2']
-        image: gcr.io/mattmoor-public/warmimage-controller@sha256:5adc366a59c83b0bb12b424c86ea89a6f996fb089eefb5870d96cf242d7d4926
-        name: warmimage-controller
       serviceAccountName: warmimage-controller
-
+      containers:
+          - name: warmimage-controller
+            image: gcr.io/mattmoor-public/warmimage-controller@sha256:5adc366a59c83b0bb12b424c86ea89a6f996fb089eefb5870d96cf242d7d4926
+            args:
+              [
+                -logtostderr=true,
+                -stderrthreshold=INFO,
+                -sleeper,
+                "gcr.io/mattmoor-public/sleeper@sha256:d431f1c78bb16fbb0c9831a610bc9580379a4f9ab0a339efd2ffb36ea5ffeca2",
+              ]
